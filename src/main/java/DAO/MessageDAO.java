@@ -6,31 +6,34 @@ import java.util.*;
 import Model.Message;
 import Util.ConnectionUtil;
 
-/*In this message DAO class I will write six methods to manipulate and retrive data from
-our database.
-1. create a new massage that the user requested a post request after the user has successfully loged in.
-the name of the method would be createNewMessage and it takes Message object from Message.java to insert 
-message fileds into our database column. 
+/*This class is DAO for message and I have six methods to manipulate and retrive message in our database.
+
+1. Create a new message if the user is registered user and post a valid message text.
+        - The name of the method would be createNewMessage and it takes Message object from Message class to insert 
+          message details into our database column. 
+        - The validation of the message text will be handled in our service class.
 *
-2. retrive all the messages from our database and put it in our list and 
-return it in order to be accessible for Authorized users.
-the name of this method is getAllmessages.
+2. Retrieve all the messages from our database and put it in our list  and return it in order to be accessible for Authorized users.
+        - The name of the method is getAllmessages.
 * 
-3. retrive a single message using message ID from a database.
-the name of the method is getMessageById which uses the message id as an input and
-return that specific message if the request is successful and if not return null.
+3. Retrieve a single message using message ID from a database.
+        - The name of the method would be getMessageById which uses the message id as an input and
+          return that specific message if the request is successful and if not return null.
 *
-4. Remove a single message using message ID from the database if the message existed. 
-so the first step is to retrieve a message by id then if the message existed delete it if not return null. 
-the name of the message would be deleteMessageById which uses the message id as an input.
+4. Remove a message using message ID from the database if the message existed. 
+        - The name of the message is deleteMessageById which uses message id as an input and retrieve a message by its id
+          then if the message existed in our database, it will delete it and return the deleted message if not it will return null.
 *
 5. Update a message by using message ID in our database.
-the name of the method would be updateMessageById which will take a message object 
-from which we pick message ID and retrieve a message content.
-If a message exists in our database, it will replace old message content with a new message.
-The validation of a new text message content will be handled in MessageService class.
-
- 
+        - The name of the method would be updateMessageById which will take 2 parameters message id and message object as an input and 
+          if message is available in our database it wll update a the message text and return null, if not it will throw an error.
+        - If a message exists in our database, it will replace old message text with a new text.
+        - The new message text should be validated. The validation of the message text will be handled by our MessageService class.
+*
+6. The last method will be retrive all messages under an account. 
+        - the name of the method the method would be getAllMessagesByAccount which will take account ID as an input and retrieve all 
+            messages by whom the message is posted by.
+        - The retrieved messages will be stored in list returned. 
  */
 
  public class MessageDAO {
@@ -89,7 +92,7 @@ The validation of a new text message content will be handled in MessageService c
         }
         return allMessages;
     }
-    /*******************************Retrieve a message by ID*********************************************/
+/************************************Retrieve a message by ID*********************************************/
 
     public Message getMessageById (int message_id) throws SQLException {
         
@@ -112,7 +115,7 @@ The validation of a new text message content will be handled in MessageService c
         return null; 
     } 
 
-    /**********************************Delete a message by ID**************************************************/
+/*************************************Delete a message by ID**************************************************/
     
     public Message deleteMessageById (int message_id) throws SQLException {
 
@@ -132,25 +135,24 @@ The validation of a new text message content will be handled in MessageService c
         return rowsDeleted > 0? existingMessage : null;
     }
 
-    /*****************************Update message by ID************************************/
+/*******************************************Update message by ID***************************************************/
 
-    public boolean updateMessageById (int message_id, String newMessageText) throws SQLException{
-
+    public Message updateMessageById (int message_id, Message message) throws SQLException{
+        
         Connection connection = ConnectionUtil.getConnection();
-            String updateSql = "Update message SET message_text = ? WHERE message_id = ?";
-            PreparedStatement updateStatement = connection.prepareStatement(updateSql);
-            updateStatement.setString(1, newMessageText);
-            updateStatement.setInt (2, message_id);
-            int rowsUpdated = updateStatement.executeUpdate();
 
-            if (rowsUpdated > 0){
-                return true;
-            }else {
-                return false;
-            }
+        String updateSql = "UPDATE message SET message_text = ? WHERE message_id = ?";
+        
+        PreparedStatement updateStatement = connection.prepareStatement(updateSql);
+
+        updateStatement.setString (1, message.getMessage_text());
+        updateStatement.setInt (2, message_id);
+        updateStatement.executeUpdate();
+
+       return null;
     }
 
-    /*****************************retrieve all messages under a given account************************************/
+/**************************************Retrieve all messages under a given account*******************************************/
 
     public List <Message> getAllMessagesByAccount (int account_id) throws SQLException {
 

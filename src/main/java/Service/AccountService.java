@@ -10,42 +10,35 @@ public class AccountService {
 
     private final AccountDAO accountDAO;
 
+    // Constructor to initialize AccountDAO dependency
     public AccountService (AccountDAO accountDAO){
         this.accountDAO = accountDAO;
     }
 /******************************Create a new account in the database using a post request*********************************/
 
     public Account createNewAccount (Account account) throws SQLException {
-    /*  check if username is not blank
-        the password should be at least 4 characters long
-        an account with that username doesn't already exist.
-            - step 1: get all accounts 
-            - step 2: Iterate through all accounts and 
-                - if username found in the list, throw an exception 
-                - if it's not, return a new account.
-    */
+
+        // Get username and password from account
         String username = account.getUsername();
         String password = account.getPassword();
 
-
-        // check if username already exists.
+        // Retrieve all accounts from the database
         List <Account> allAccounts = accountDAO.getAllAccounts(); 
+
+        // Check if the username already exists in the database
         for (Account existingAccount : allAccounts){
             if (existingAccount.getUsername().equals(username)){
-                // throw new IllegalArgumentException("Username already exists");
-                return null;
+                return null;    //indicates username already exists
             }
         }
 
-        //Validate that the username is not valid.
+        //Validate that the username is not blank
         if (username == null || username.isBlank() ){
-            // throw new IllegalArgumentException("Username can not be blank");
             return null;
         }
 
         //validate that the password is at least 4 character long.
         if (password == null || password.length() < 4){
-            // throw new IllegalArgumentException ("Password must be at least 4 character long");
             return null;
         }
 
@@ -64,20 +57,23 @@ public class AccountService {
 
     public Account authenticateUser(Account account) throws SQLException {
 
-        //check if the user has already registered 
+        // Retrieve all accounts from the database
         List <Account> allUsers  = accountDAO.getAllAccounts();
 
+        // Check if username and password match any existing account
         for (Account existingUser : allUsers){
             if (existingUser.getUsername().equals(account.getUsername()) && existingUser.getPassword().equals(account.getPassword())){
-                return existingUser;
+                return existingUser;    // Return existing account if authentication is successful
             }
         }
 
+        // Return null if authentication fails
         return null;
     }
 
 /********************************************retreive all Accounts from a database****************************************/
     public List <Account> getAllAccounts () throws SQLException{
+        // Call DAO method to get all accounts
         return accountDAO.getAllAccounts();
     }
 }

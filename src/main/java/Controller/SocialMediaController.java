@@ -8,24 +8,26 @@ import Service.MessageService;
 import Service.AccountService;
 
 import java.sql.SQLException;
-// import Service.AccountService;
 import java.util.*;
 
 import javax.security.sasl.AuthenticationException;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonMappingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import DAO.AccountDAO;
 import DAO.MessageDAO;
 
-/**
- * TODO: You will need to write your own endpoints and handlers for your controller. The endpoints you will need can be
- * found in readme.md as well as the test cases. You should
- * refer to prior mini-project labs and lecture materials for guidance on how a controller may be built.
+/*
+ * Controller class that defines the API endpoints for the social media application.
+ * Contains handlers for account registration, login, message creation, retrieval, update, and deletion.
  */
+
 public class SocialMediaController {
     private final MessageService messageService;
     private AccountService accountService = null;
-
-    private Account authenticatedAccount  = null; // Used to track login status
+    private Account authenticatedAccount  = null;      // Used to track login status
 
     public SocialMediaController () {
 
@@ -43,35 +45,15 @@ public class SocialMediaController {
      */
     public Javalin startAPI() {
         Javalin app = Javalin.create();
-
-        //user registration endpoint 
-        app.post("register", this::userRegistrationHandler);
-
-        //user Login endpoint
-        app.post("login", this::userLoginHandler);
-
-        //create new message endpoint 
-
-        app.post("messages", this::createMessageHandler);
-
-        //get all messages endpoint 
-
-        app.get("messages", this::getAllMessagesHandler);
-
-        //retrieve single message endpoint
-        app.get("messages/{message_id}", this::getSingleMessageHandler);
-
-        //Delete message by id endpoint 
-        app.delete("messages/{message_id}", this::deleteSingleMessageHandler);
-
-        //update message content by id endpoint 
-        app.patch("message/{message_id}", this::updateMessageHandler);
-
-        //retrive all messages by user account id endpoint 
         
-        app.get("accounts/{account_id}/messages", this::getAllMessagesByAccountHandler);
-
-
+        app.post("register", this::userRegistrationHandler);                              //user registration endpoint 
+        app.post("login", this::userLoginHandler);                                        //user Login endpoint
+        app.post("messages", this::createMessageHandler);                                 //create new message endpoint 
+        app.get("messages", this::getAllMessagesHandler);                                 //get all messages endpoint 
+        app.get("messages/{message_id}", this::getSingleMessageHandler);                  //retrieve single message endpoint
+        app.delete("messages/{message_id}", this::deleteSingleMessageHandler);            //Delete message by id endpoint 
+        app.patch("messages/{message_id}", this::updateMessageHandler);                   //update message content by id endpoint 
+        app.get("accounts/{account_id}/messages", this::getAllMessagesByAccountHandler);  //retrive all messages by user account id endpoint 
 
         return app;
     }
@@ -116,20 +98,16 @@ public class SocialMediaController {
 
 /**************************************************User login handler*******************************************/
 
-/* handles the post request to /register 
-1.Parse the json request body to create an Account object
- 2.Call AccountService to authenticate the user credential before login.
- 3.Return a response body that contain a JSON of the account in the response body, 
-    including its account_id if it is successful and 401 (unautorized user) if it's not succesful.
- * 
+/* handles the post request to /login
+    1.Parse the json request body to create an Account object
+    2.Authenticates the user's credentials through AccountService.
+    3.Returns account data in JSON format on successful login or a 401 status if unsuccessful.
  */
 
     private void userLoginHandler (Context context){
 
         try {
             Account account = context.bodyAsClass(Account.class);
-
-
 
             //Check if username and password are provided
             if (account.getUsername() == null || account.getUsername().isBlank() || 
@@ -151,11 +129,17 @@ public class SocialMediaController {
             context.status(400).result(e.getMessage());
         }catch (SQLException e){
             context.status(500).result(e.getMessage());
-        }
-        
+        }  
     }
 
 /********************************************Create a new messages handler*****************************************/
+/*
+     * Handles POST request to /messages endpoint.
+     * 1. Parses the JSON request body to create a Message object.
+     * 2. Validates the message content length and checks for blank messages.
+     * 3. Calls MessageService to save the new message if valid, else returns a 400 status.
+     */
+
 private void createMessageHandler (Context context) throws SQLException{
     try {
 
@@ -164,7 +148,7 @@ private void createMessageHandler (Context context) throws SQLException{
 
         // Validate message content
         if (message.getMessage_text() == null  || message.getMessage_text().isBlank() || message.getMessage_text().length() > 255){
-            context.status(400).result("Invalid message input! Please try again");
+            context.status(400).result("");
             return;
         }
 
@@ -181,26 +165,37 @@ private void createMessageHandler (Context context) throws SQLException{
     }catch (SQLException e){
         context.status(500).result(e.getMessage());
     }catch(AuthenticationException e){
-        context.status(401).result(e.getMessage());
+        context.status(400).result(e.getMessage());
     }
 }
 
-/********************************************get all messages handler*********************************************/
+/********************************************Get all messages handler*********************************************/
 
     private void getAllMessagesHandler (Context context) throws SQLException{
+
+        /*
+        * Handles GET request to /messages endpoint.
+        * Retrieves all messages from the MessageService and returns them in JSON format.
+        */
+
         try {
             List <Message> messages  = messageService.getAllMessages();
             context.status(200).json(messages);
-            
         } catch (Exception e) {
             context.status(500).result("failed to retrieve messages due to a server error.");
         }
-        
     }
 
-//********************************************get a singler message handler*******************************************/
+//********************************************Get a singler message handler*******************************************/
 
     private void getSingleMessageHandler (Context context){
+
+    /*
+     * Handles GET request to /messages/{message_id} endpoint.
+     * Retrieves a message by its ID and returns it in JSON format.
+     * Returns a 400 status if the ID is invalid and a 500 status for server errors.
+     */
+
         try {
             // Retrieve message ID from the path parameter
             int messageId =  Integer.parseInt(context.pathParam("message_id"));
@@ -221,6 +216,10 @@ private void createMessageHandler (Context context) throws SQLException{
     /********************************************Delete single message using message id handler*****************************************/
 
     private void deleteSingleMessageHandler (Context context) {
+
+    /* Handles DELETE request to /messages/{message_id} endpoint.
+     * Deletes a message by its ID. Returns 200 status on success, regardless of whether the message existed.
+     */
 
         try {
             int messageId = Integer.parseInt(context.pathParam("message_id"));
@@ -245,36 +244,54 @@ private void createMessageHandler (Context context) throws SQLException{
 
       
     }
-/***********************************Update a message by ID handler ************************************************/
+/***********************************Update a message by ID handler************************************************/
 
-    private void updateMessageHandler (Context context) throws SQLException{
+    private void updateMessageHandler (Context context){
 
-         //extract the message id from the path parameter (URL)
-         int message_id = Integer.parseInt(context.pathParam("message_id"));
-         String newMessageText = context.bodyAsClass(Message.class).getMessage_text();
-         
-        try{
+    /*
+     * Handles PATCH request to /messages/{message_id} endpoint.
+     * Updates a message's content by its ID and returns the updated message in JSON format.
+     * Validates message content length and checks for empty content.
+     */
+        try {
+            ObjectMapper mapper = new ObjectMapper();
+            Message message = mapper.readValue(context.body(), Message.class);
+            int messageId = Integer.parseInt(context.pathParam("message_id"));
 
-        //call service class to update the message
-        Message updatedMessage = messageService.updateMessageContent (message_id, newMessageText);
+            if (message.getMessage_text() == null || message.getMessage_text().isEmpty()) {
+                context.status(400).json("");
+                return;
+            }
 
-        if (updatedMessage != null){
-            context.status(200).json(updatedMessage);    //return updated message on success 
-        }else{
-            context.status(400).result("Message not found or could not be updated."); //if message is not found
-        }
+            Message updatedMessage = messageService.updateMessageContent(messageId, message);
 
-        }catch (IllegalArgumentException e){
-            context.status(400).result("Invalid message ID or content.");  //handles invalid input
-        }catch (NoSuchElementException e){
-            context.status(400).result(e.getMessage());
-        }catch (SQLException e){
-            context.status(500).result(e.getMessage());
-        }
-
+            if (updatedMessage == null || updatedMessage.getMessage_text().length() >= 255) {
+                context.status(400);
+            } else {
+                context.json(mapper.writeValueAsString(updatedMessage));
+            }
+            
+    } catch (JsonMappingException e) {
+        // JSON structure was invalid or did not map to Message class
+        context.status(400).result("Invalid JSON structure for message content.");
+    } catch (NumberFormatException e) {
+        // Provided message ID is not a valid integer
+        context.status(400).result("Invalid message ID format.");
+    }  catch (JsonProcessingException e) {
+        context.status(400).result("Invalid JSON format. Please check the request body.");
+    }catch (SQLException e) {
+        // Database-related error
+        context.status(500).result("Database error occurred while updating message.");
     }
+}
 /***********************************Update a message by ID handler ************************************************/
     private void getAllMessagesByAccountHandler (Context context) throws SQLException{
+
+    /*
+     * Handles GET request to /accounts/{account_id}/messages endpoint.
+     * Retrieves all messages associated with a given account ID and returns them in JSON format.
+     */
+
         try {
             int accountId = Integer.parseInt(context.pathParam("account_id"));
 
@@ -289,8 +306,6 @@ private void createMessageHandler (Context context) throws SQLException{
         }catch (Exception e) {
             e.printStackTrace();
             context.status(500).result ("Failed to retrieve messages due to a server error.");
-
-
         }
     }
 }
